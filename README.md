@@ -2,62 +2,73 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10-blue.svg)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-위성영상 도메인에서 4가지 Super-Resolution 모델의 성능을 비교 분석한 연구 프로젝트입니다.
+위성영상 도메인에서 4가지 Super-Resolution 모델의 성능을 비교 분석한 프로젝트입니다.
 
 ---
 
-## 📊 핵심 발견 (Key Findings)
+##  핵심 발견 (Key Findings)
 
 > **"SR 모델의 성능은 모델 구조보다 열화 가정(Degradation Assumption)에 훨씬 민감하다"**
+- 이미지 복원 문제에서, 모델의 아키텍처보다 학습할 때 사용한 열화모델(이미지가 어떻게 손상되는지에 대한 가정)이 결과 성능에 보다 큰 영향을 준다는 뜻입니다.
+- 모델은 주어진 열화 분포에 맞춰 특정한 보정 방법을 학습합니다. 학습 시 사용한 열화와 인풋 데이터의 열화방식이 일치해야 잘 동작합니다.
+- 따라서, 위성분야의 다운스트림 태스크에서 사용할 모델 선정시 **도메인 데이터의 열화방식을 고려해 모델을 선정해야 한다는 결론을 얻었습니다**.
 
-### 🎯 실험 결과
+###  실험 결과
 
-| 열화 타입 | Classical SR (EDSR, SwinIR-M) | Real-SR (Real-ESRGAN, HAT) | 승자 |
-|----------|------------------------------|---------------------------|------|
-| **Bicubic 열화** | **28.4 dB** ✅ | 23.2 dB | **Classical SR** (+5.2 dB) |
-| **센서/현실 열화** | 9.4 dB ❌ | **18.0 dB** ✅ | **Real-SR** (+8.6 dB) |
+| 데이터 열화 타입 | Classical SR (EDSR, SwinIR-M) | Real-SR (Real-ESRGAN, HAT) |
+|----------|------------------------------|---------------------------|
+| **Bicubic 열화** | **28.4 dB** ✅ | 23.2 dB | 
+| **센서/현실 열화** | 9.4 dB  | **18.0 dB** ✅ | 
 
 **핵심 인사이트:**
-- Bicubic 환경: Classical SR이 5.2 dB 우세
-- 센서 환경: Real-SR이 8.6 dB 우세 (Classical SR은 **19 dB 급락!** 📉)
+- Classical SR 은 모델 학습시 주로 Bicubic 다운샘플링으로 학습된 모델 (예: EDSR, SwinIR-M)
+- Real-SR: 실제 세계의 복합 열화(블러, 센서 노이즈, 압축 등)를 모사하거나 강건성(robustness)을 고려해 학습된 모델 (예: Real-ESRGAN, HAT)
 - **성능 역전**: 열화 타입에 따라 완전히 뒤바뀜
 
-### 📈 실험 결과 시각화
+**학습 가정의 차이 **
+- Classical SR
+    - 가정: 저해상도 이미지는 고해상도를 단순히 bicubic으로 다운샘플한 결과.
+    - 결과: 입력 노이즈/블러가 단순하고 규칙적 → 고주파 복원에 최적화.
+- Real-SR
+    - 가정: 입력은 센서 PSF, 대기 산란, 노이즈, 압축 등 복합적·비선형적 열화를 겪음.
+    - 결과: 불확실성·잡음·구조적 손상에 강건하도록 학습됨.
+###  실험 결과 시각화
 
 ![Result Chart](result.png)
 
 **차트 해석:**
-- **파란색 막대**: UC Merced (실제 위성영상 + Bicubic 열화)
-- **주황색 막대**: Synthetic (합성 데이터 + Bicubic 열화)
-- **초록색 빗금 막대**: Sentinel-2 Simulation (실제 위성영상 + 센서 열화) ⭐
+- **파란색 막대**: UC Merced Land Use DataSet + Bicubic Degradation
+- **주황색 막대**: Synthetic (합성 데이터 + Bicubic Degradation)
+- **초록색 빗금 막대**: UC Merced Land Use DataSet + Real-world complex Degradation 
 
-**핵심 관찰:**
-1. 왼쪽 2개 모델 (EDSR, SwinIR): Bicubic 데이터(파란색, 주황색)에서 우수 → 센서 데이터(초록색)에서 급락
-2. 오른쪽 2개 모델 (Real-ESRGAN, HAT): 모든 데이터에서 일관된 성능 유지
-3. **빨간 구분선**: Classical SR (좌) ↔ Real-SR (우)
+**관찰:**
+1. Classicar SR 모델은 Bicubic Degradation이 사용된 데이터셋에서 강세를 보이고, Resl SR 모델은 Real-world complex Degradation 이 사용된 데이터셋에서 성능 우위 확인
 
 ---
 
-## 🔍 연구 배경
+##  연구 배경
 
 ### 문제 정의
 
 기존 SR 연구는 주로 **Bicubic downsampling** 환경에서 평가되지만, 실제 위성영상은 다음과 같은 **복합 열화**를 겪습니다:
 
-- 🌫️ 대기 산란 (Atmospheric Scattering)
-- 🔭 센서 PSF 블러 (Point Spread Function)
-- 📡 센서 노이즈 (Sensor Noise)
-- 🗜️ JPEG 압축 (Compression Artifacts)
+-  대기 산란 (Atmospheric Scattering)
+-  센서 PSF 블러 (Point Spread Function)
+-  센서 노이즈 (Sensor Noise)
+-  JPEG 압축 (Compression Artifacts)
 
-**연구 질문**: Bicubic 환경에서 우수한 모델이 실제 센서 열화 환경에서도 우수할까?
+**의문점**: 
+- super-resolution을 위한 모델 선정시 단순히 벤치마크성능이 우수한 모델을 고르면 되는걸까?
+- Bicubic 환경에서 우수한 모델이 실제 센서 열화 환경에서도 우수할까?
 
-**답변**: ❌ **아니다!** 열화 타입 불일치 시 최대 **19 dB 성능 급락** 발생
+**결론**:
+- 벤치마크 성능위주로 모델 선정하면, 열화 타입 불일치 시 *성능 급락**을 겪는다
+- super-resolution 모델 선정은 데이터의 Degradation type과 이어질 다운스트림 태스크를 고려해야한다 
 
 ---
 
-## 🧪 실험 설계
+##  실험 설계
 
 ### 테스트 모델 (4개)
 
@@ -73,17 +84,17 @@
 
 ### 테스트 데이터셋 (3개)
 
-#### 1️⃣ UC Merced (실제 위성영상 + Bicubic)
+#### 1️⃣ UC Merced Land Use + Bicubic Degradation
 - 원본: UC Merced Land Use Dataset
 - 열화: Bicubic downsampling (256×256 → 64×64 → 256×256)
 - 목적: 이상적인 환경에서의 성능 측정
 
-#### 2️⃣ Synthetic (합성 데이터 + Bicubic)
+#### 2️⃣ Synthetic (합성 데이터 + Bicubic Degradation)
 - 원본: 랜덤 생성된 합성 위성영상
 - 열화: Bicubic downsampling
 - 목적: 단순 패턴에서의 성능 측정
 
-#### 3️⃣ Sentinel-2 Simulation (실제 위성영상 + 센서 열화) ⭐
+#### 3️⃣ UC Merced Land Use + Real-world complex Degradation
 - 원본: UC Merced Land Use Dataset
 - 열화: **Sentinel-2 센서 시뮬레이션**
   - 대기 산란 (Rayleigh scattering)
@@ -91,70 +102,10 @@
   - 센서 노이즈 (Gaussian + Poisson)
 - 목적: 실제 위성 센서 환경 재현
 
-> **⚠️ 중요**: 실제 Sentinel-2 데이터가 아닌, 물리적 센서 특성을 코드로 시뮬레이션한 데이터입니다.
+> **⚠️ 중요**: Real-world complex Degradation은 물리적 센서 특성을 코드로 시뮬레이션 한 것을 말합니다.
 
 ---
 
-## 📈 상세 결과 분석
-
-### 데이터셋별 PSNR 결과
-
-#### UC Merced (Bicubic 열화)
-
-```
-Classical SR (SwinIR-M): 28.4 dB ✅ (최고)
-Classical SR (EDSR):     27.8 dB ✅
-Real-SR (Real-ESRGAN):   23.2 dB ⚠️
-Real-SR (HAT):           22.6 dB ⚠️
-```
-
-**분석**: Bicubic 환경에서는 Bicubic으로 학습된 Classical SR이 압도적
-
-#### Synthetic (Bicubic 열화)
-
-```
-Classical SR (SwinIR-M): 19.2 dB ✅
-Classical SR (EDSR):     19.2 dB ✅
-Real-SR (Real-ESRGAN):   18.9 dB ⚠️
-Real-SR (HAT):           18.9 dB ⚠️
-```
-
-**분석**: 단순 패턴에서도 동일한 경향
-
-#### Sentinel-2 Simulation (센서 열화) ⭐
-
-```
-Real-SR (Real-ESRGAN):   18.0 dB ✅ (최고, 강건함!)
-Real-SR (HAT):           13.2 dB ✅
-Classical SR (EDSR):      9.4 dB ❌ (19 dB 폭락!)
-Classical SR (SwinIR-M):  9.1 dB ❌ (19 dB 폭락!)
-```
-
-**분석**: 센서 노이즈 환경에서는 Real-SR이 2배 더 강건
-
-### 성능 변화 비교
-
-| 모델 타입 | UC Merced → Sentinel-2 | 성능 하락 |
-|----------|----------------------|----------|
-| **Classical SR (SwinIR-M)** | 28.4 dB → 9.1 dB | **-19.3 dB** 💥 |
-| **Classical SR (EDSR)** | 27.8 dB → 9.4 dB | **-18.4 dB** 💥 |
-| **Real-SR (Real-ESRGAN)** | 23.2 dB → 18.0 dB | **-5.2 dB** ✅ |
-| **Real-SR (HAT)** | 22.6 dB → 13.2 dB | **-9.4 dB** ✅ |
-
-**핵심**: Real-SR은 열화 불일치 시에도 상대적으로 안정적 (3.6배 더 강건)
-
----
-
-## 💡 실무적 함의
-
-### "최고의 모델"은 존재하지 않는다
-
-**올바른 접근:**
-```
-1. 데이터 열화 분석
-2. 학습 열화 일치 모델 선택
-3. 아키텍처 고려는 그 다음
-```
 
 ### 모델 선택 가이드
 
@@ -173,14 +124,6 @@ Classical SR (SwinIR-M):  9.1 dB ❌ (19 dB 폭락!)
 - 실제 배포 시 도메인 특성 고려 필수
 
 ---
-
-## 🛠️ 기술 스택
-
-### 모델 & 프레임워크
-- **PyTorch 2.0+**: 딥러닝 프레임워크
-- **super-image**: EDSR 구현
-- **Real-ESRGAN**: Real-world SR 라이브러리
-- **basicsr**: SwinIR, HAT 아키텍처
 
 ### 평가 지표
 - **PSNR** (Peak Signal-to-Noise Ratio): 화질 측정
@@ -216,7 +159,6 @@ pip install jupyter notebook
 - ✅ `swinir_classical_x4.pth` (57MB) - SwinIR-M Classical SR
 - ✅ `HAT-L_SRx4_ImageNet-pretrain.pth` (158MB) - HAT-L Real-SR
 
-> **참고**: 체크포인트는 Git LFS를 사용하지 않고 직접 포함되어 있습니다.
 
 ### 3. 데이터셋 다운로드
 
@@ -233,40 +175,7 @@ UC Merced Land Use Dataset (필수):
 jupyter notebook SR_Model_Comparison.ipynb
 ```
 
-**실행 순서:**
-1. 셀 1-5: 환경 설정 및 모델 로드
-2. 셀 6-8: 데이터셋 로드 (UC Merced, Synthetic)
-3. 셀 9-11: 2개 데이터셋 테스트
-4. 셀 12-14: Sentinel-2 시뮬레이션 추가
-5. 셀 15-17: 3개 데이터셋 종합 비교
 
----
-
-## 📁 프로젝트 구조
-
-```
-super_resolution_model_comp/
-├── SR_Model_Comparison.ipynb    # 메인 실험 노트북
-├── hat_arch.py                   # HAT 모델 아키텍처
-├── result.png                    # 실험 결과 차트
-├── .gitignore                    # Git 제외 파일 설정
-├── README.md                     # 프로젝트 문서 (이 파일)
-│
-├── 체크포인트/ (285MB)
-│   ├── edsr-base_x4.pt          # EDSR 모델 (5.8MB)
-│   ├── RealESRGAN_x4plus.pth    # Real-ESRGAN 모델 (64MB)
-│   ├── swinir_classical_x4.pth  # SwinIR-M 모델 (57MB)
-│   └── HAT-L_SRx4_ImageNet-pretrain.pth  # HAT-L 모델 (158MB)
-│
-└── UCMerced_LandUse/             # 데이터셋 (Git 제외, 별도 다운로드)
-    └── Images/
-        ├── agricultural/
-        ├── airplane/
-        ├── beach/
-        └── ... (21개 클래스, 총 2,100장)
-```
-
----
 
 ## 🔬 재현 가능성
 
@@ -283,13 +192,6 @@ super_resolution_model_comp/
 3. UC Merced 데이터셋 다운로드
 4. 노트북 순차 실행
 
-**예상 실행 시간**: 
-- 모델 로드: ~10초
-- 2개 데이터셋 테스트: ~1분
-- 3개 데이터셋 테스트: ~2분
-- 총 소요 시간: **약 3-5분** (5개 이미지 × 3개 데이터셋 × 4개 모델)
-
----
 
 ## 📚 참고 문헌
 
@@ -302,73 +204,6 @@ super_resolution_model_comp/
 ### 데이터셋
 - **UC Merced Land Use Dataset**: Yang & Newsam, 2010 ([Link](http://weegee.vision.ucmerced.edu/datasets/landuse.html))
 
----
-
-## 🤝 기여 방법
-
-이 프로젝트에 기여하고 싶으시다면:
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-**기여 아이디어:**
-- 추가 데이터셋 실험 (Landsat, MODIS 등)
-- 다른 SR 모델 추가 (BSRGAN, SwinIR-Large 등)
-- 추가 평가 지표 (SSIM, LPIPS 등)
-- 실제 Sentinel-2 데이터셋 실험
-
----
-
-## 📝 라이선스
-
-이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 `LICENSE` 파일을 참조하세요.
-
----
-
-## 👤 저자
-
-**WhiteTree93**
-- GitHub: [@WhiteTree93](https://github.com/WhiteTree93)
-- Email: spike10912@gmail.com
-
----
-
-## 🙏 감사의 말
-
-- UC Merced 데이터셋 제공: UC Merced Vision Lab
-- 모델 구현: [super-image](https://github.com/eugenesiow/super-image), [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN), [basicsr](https://github.com/XPixelGroup/BasicSR) 팀
-- PyTorch 커뮤니티
-
----
-
-## 📌 인용
-
-이 연구를 사용하시는 경우 다음과 같이 인용해주세요:
-
-```bibtex
-@misc{whitetree2026sr,
-  author = {WhiteTree93},
-  title = {Super-Resolution Model Comparison for Satellite Imagery: 
-           The Importance of Degradation Assumption over Model Architecture},
-  year = {2026},
-  publisher = {GitHub},
-  url = {https://github.com/WhiteTree93/super_resolution_model_comp}
-}
-```
-
----
-
 ## 🔗 관련 링크
 
 - [Jupyter Notebook 보기](SR_Model_Comparison.ipynb)
-- [실험 결과 차트](result.png)
-- [HAT 아키텍처 구현](hat_arch.py)
-
----
-
-**⭐ 이 프로젝트가 도움이 되셨다면 Star를 눌러주세요!**
-
-**💬 질문이나 제안사항이 있으시면 Issue를 열어주세요!**
