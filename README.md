@@ -42,9 +42,7 @@
 - **파란색 막대**: UC Merced Land Use DataSet + Bicubic Degradation
 - **주황색 막대**: Synthetic (합성 데이터 + Bicubic Degradation)
 - **초록색 빗금 막대**: UC Merced Land Use DataSet + Real-world complex Degradation 
-
-**관찰:**
-1. Classicar SR 모델은 Bicubic Degradation이 사용된 데이터셋에서 강세를 보이고, Resl SR 모델은 Real-world complex Degradation 이 사용된 데이터셋에서 성능 우위 확인
+- Classicar SR 모델은 Bicubic Degradation이 사용된 데이터셋에서 강세를 보이고, Resl SR 모델은 Real-world complex Degradation 이 사용된 데이터셋에서 성능 우위 확인
 
 ---
 
