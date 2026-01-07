@@ -4,6 +4,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
 
 위성영상 도메인에서 4가지 Super-Resolution 모델의 성능을 비교 분석한 프로젝트입니다.
+엔지니어로써 super-resolution을 위해 어떤 모델을 쓰는게 적절한지, 모델 선정 기준을 정하기 위해 분석한 내용을 정리했습니다.
 
 ---
 
@@ -26,7 +27,7 @@
 - Real-SR: 실제 세계의 복합 열화(블러, 센서 노이즈, 압축 등)를 모사하거나 강건성(robustness)을 고려해 학습된 모델 (예: Real-ESRGAN, HAT)
 - **성능 역전**: 열화 타입에 따라 완전히 뒤바뀜
 
-**학습 가정의 차이 **
+**학습 가정의 차이** 
 - Classical SR
     - 가정: 저해상도 이미지는 고해상도를 단순히 bicubic으로 다운샘플한 결과.
     - 결과: 입력 노이즈/블러가 단순하고 규칙적 → 고주파 복원에 최적화.
